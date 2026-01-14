@@ -1,0 +1,15 @@
+# API Keys Configuration (Example)
+# Copy this file to api_keys.yaml and fill in your actual API keys
+# DO NOT commit api_keys.yaml to version control
+
+# NewsAPI Key (for news data collection)
+# Get your free API key at: https://newsapi.org/
+newsapi:
+  api_key: "your_newsapi_key_here"
+
+# Alpha Vantage API Key (Optional - alternative stock data source)
+# Get your free API key at: https://www.alphavantage.co/
+alphavantage:
+  api_key: "your_alphavantage_key_here"
+
+# Note: yfinance does not require an API key
