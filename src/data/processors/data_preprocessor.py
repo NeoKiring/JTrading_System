@@ -194,10 +194,10 @@ class DataPreprocessor:
             pd.DataFrame: 処理済みデータ
         """
         # 前方埋め（Forward Fill）
-        df = df.fillna(method='ffill', limit=5)
+        df = df.ffill(limit=5)
 
         # 後方埋め（Backward Fill）
-        df = df.fillna(method='bfill', limit=5)
+        df = df.bfill(limit=5)
 
         # それでも残る欠損値は削除
         initial_count = len(df)

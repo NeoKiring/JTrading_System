@@ -55,11 +55,15 @@ class XGBoostModel(BaseModel):
 
         if X_val is not None and y_val is not None:
             eval_set = [(X_train, y_train), (X_val, y_val)]
+
+            # XGBoost 2.0以降の早期停止の実装
+            callbacks = [xgb.callback.EarlyStopping(rounds=early_stopping_rounds)]
+
             self.model.fit(
                 X_train,
                 y_train,
                 eval_set=eval_set,
-                early_stopping_rounds=early_stopping_rounds,
+                callbacks=callbacks,
                 verbose=verbose
             )
         else:
@@ -133,11 +137,17 @@ class LightGBMModel(BaseModel):
 
         if X_val is not None and y_val is not None:
             eval_set = [(X_train, y_train), (X_val, y_val)]
+
+            # コールバックの設定
+            callbacks = [lgb.early_stopping(early_stopping_rounds)]
+            if verbose:
+                callbacks.append(lgb.log_evaluation(period=10))
+
             self.model.fit(
                 X_train,
                 y_train,
                 eval_set=eval_set,
-                callbacks=[lgb.early_stopping(early_stopping_rounds), lgb.log_evaluation(verbose)]
+                callbacks=callbacks
             )
         else:
             self.model.fit(X_train, y_train)
