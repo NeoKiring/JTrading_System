@@ -1,4 +1,5 @@
 @echo off
+setlocal enabledelayedexpansion
 chcp 65001 >nul
 REM JTrading System 起動スクリプト
 
@@ -41,38 +42,61 @@ echo.
 
 set /p mode="モード番号を入力 (1-5, Enter=1): "
 
-if "%mode%"=="" set mode=1
+REM デフォルト値の設定
+if "!mode!"=="" set mode=1
 
-if "%mode%"=="1" (
-    echo GUIモードで起動中...
-    python src\main.py --mode gui
-) else if "%mode%"=="2" (
-    echo データ収集を開始中...
-    python src\main.py --mode collect
-) else if "%mode%"=="3" (
-    set /p symbol="銘柄コードを入力 (例: 7203.T): "
-    if "!symbol!"=="" set symbol=7203.T
-    echo モデル訓練を開始中 (銘柄: !symbol!)...
-    python src\main.py --mode train --symbol !symbol!
-) else if "%mode%"=="4" (
-    set /p symbol="銘柄コードを入力 (例: 7203.T): "
-    if "!symbol!"=="" set symbol=7203.T
-    echo バックテストを開始中 (銘柄: !symbol!)...
-    python src\main.py --mode backtest --symbol !symbol!
-) else if "%mode%"=="5" (
-    set /p symbol="銘柄コードを入力 (例: 7203.T): "
-    if "!symbol!"=="" set symbol=7203.T
-    echo フルワークフローを開始中 (銘柄: !symbol!)...
-    python src\main.py --mode full --symbol !symbol!
-) else (
-    echo [エラー] 無効なモード番号です
-    pause
-    exit /b 1
-)
+REM モードに応じて処理を分岐
+if "!mode!"=="1" goto MODE_GUI
+if "!mode!"=="2" goto MODE_COLLECT
+if "!mode!"=="3" goto MODE_TRAIN
+if "!mode!"=="4" goto MODE_BACKTEST
+if "!mode!"=="5" goto MODE_FULL
 
+REM 無効なモード番号
+echo [エラー] 無効なモード番号です
+pause
+exit /b 1
+
+:MODE_GUI
+echo.
+echo GUIモードで起動中...
+python src\main.py --mode gui
+goto END
+
+:MODE_COLLECT
+echo.
+echo データ収集を開始中...
+python src\main.py --mode collect
+goto END
+
+:MODE_TRAIN
+echo.
+set /p symbol="銘柄コードを入力 (例: 7203.T, Enter=7203.T): "
+if "!symbol!"=="" set symbol=7203.T
+echo モデル訓練を開始中 (銘柄: !symbol!)...
+python src\main.py --mode train --symbol !symbol!
+goto END
+
+:MODE_BACKTEST
+echo.
+set /p symbol="銘柄コードを入力 (例: 7203.T, Enter=7203.T): "
+if "!symbol!"=="" set symbol=7203.T
+echo バックテストを開始中 (銘柄: !symbol!)...
+python src\main.py --mode backtest --symbol !symbol!
+goto END
+
+:MODE_FULL
+echo.
+set /p symbol="銘柄コードを入力 (例: 7203.T, Enter=7203.T): "
+if "!symbol!"=="" set symbol=7203.T
+echo フルワークフローを開始中 (銘柄: !symbol!)...
+python src\main.py --mode full --symbol !symbol!
+goto END
+
+:END
 echo.
 echo ================================================
 echo 処理が完了しました
 echo ================================================
-
+echo.
 pause
