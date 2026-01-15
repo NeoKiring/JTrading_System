@@ -18,6 +18,7 @@ from src.data.processors.data_preprocessor import DataPreprocessor
 from src.models.ml_models import XGBoostModel, evaluate_model
 from src.backtesting.backtest_engine import BacktestEngine
 from src.gui.main_window import launch_gui
+from src.gui.main_window_enhanced import launch_enhanced_gui
 
 
 def setup_system():
@@ -196,9 +197,9 @@ def main():
 
     parser.add_argument(
         '--mode',
-        choices=['gui', 'cli', 'collect', 'train', 'backtest', 'full'],
-        default='gui',
-        help='Execution mode'
+        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full'],
+        default='gui2',
+        help='Execution mode (gui2: Enhanced GUI with charts)'
     )
 
     parser.add_argument(
@@ -215,9 +216,14 @@ def main():
 
     try:
         if args.mode == 'gui':
-            # GUI モード
+            # GUI モード（シンプル版）
             logger.info("Launching GUI mode...")
             launch_gui()
+
+        elif args.mode == 'gui2':
+            # GUI モード（拡張版 - チャート付き）
+            logger.info("Launching Enhanced GUI mode with charts...")
+            launch_enhanced_gui()
 
         elif args.mode == 'collect':
             # データ収集のみ

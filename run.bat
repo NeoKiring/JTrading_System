@@ -33,33 +33,41 @@ if errorlevel 1 (
 
 echo.
 echo 実行モードを選択してください:
-echo   1. GUI モード（デフォルト）
-echo   2. データ収集のみ
-echo   3. モデル訓練のみ
-echo   4. バックテストのみ
-echo   5. フルワークフロー
+echo   1. 拡張GUI モード（チャート表示対応）★推奨
+echo   2. シンプルGUI モード
+echo   3. データ収集のみ
+echo   4. モデル訓練のみ
+echo   5. バックテストのみ
+echo   6. フルワークフロー
 echo.
 
-set /p mode="モード番号を入力 (1-5, Enter=1): "
+set /p mode="モード番号を入力 (1-6, Enter=1): "
 
 REM デフォルト値の設定
 if "!mode!"=="" set mode=1
 
 REM モードに応じて処理を分岐
-if "!mode!"=="1" goto MODE_GUI
-if "!mode!"=="2" goto MODE_COLLECT
-if "!mode!"=="3" goto MODE_TRAIN
-if "!mode!"=="4" goto MODE_BACKTEST
-if "!mode!"=="5" goto MODE_FULL
+if "!mode!"=="1" goto MODE_GUI2
+if "!mode!"=="2" goto MODE_GUI
+if "!mode!"=="3" goto MODE_COLLECT
+if "!mode!"=="4" goto MODE_TRAIN
+if "!mode!"=="5" goto MODE_BACKTEST
+if "!mode!"=="6" goto MODE_FULL
 
 REM 無効なモード番号
 echo [エラー] 無効なモード番号です
 pause
 exit /b 1
 
+:MODE_GUI2
+echo.
+echo 拡張GUIモードで起動中（チャート表示対応）...
+python src\main.py --mode gui2
+goto END
+
 :MODE_GUI
 echo.
-echo GUIモードで起動中...
+echo シンプルGUIモードで起動中...
 python src\main.py --mode gui
 goto END
 
