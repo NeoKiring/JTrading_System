@@ -31,7 +31,7 @@ class DataPreprocessor:
         add_technical_indicators: bool = True,
         add_lag_features: bool = True,
         add_rolling_features: bool = True,
-        scale_features: bool = True
+        scale_features: bool = False  # デフォルトをFalseに変更（train/test分割後にスケーリングすべき）
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         学習用データを準備
@@ -239,6 +239,41 @@ class DataPreprocessor:
 
         return pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
 
+    def fit_scaler(self, X_train: pd.DataFrame, method: str = 'standard'):
+        """
+        訓練データでスケーラーをfit（データリーケージ防止）
+
+        Args:
+            X_train: 訓練用特徴量
+            method: スケーリング方法（'standard', 'minmax'）
+        """
+        if method == 'standard':
+            self.scaler = StandardScaler()
+        elif method == 'minmax':
+            self.scaler = MinMaxScaler()
+        else:
+            raise ValueError(f"Unknown scaling method: {method}")
+
+        self.scaler.fit(X_train)
+        logger.info(f"Scaler fitted on training data using {method} method")
+
+    def transform_features(self, X: pd.DataFrame) -> pd.DataFrame:
+        """
+        特徴量をスケーリング（fit済みのスケーラーを使用）
+
+        Args:
+            X: 特徴量
+
+        Returns:
+            pd.DataFrame: スケーリング済み特徴量
+        """
+        if self.scaler is None:
+            logger.warning("Scaler not fitted yet. Returning original data.")
+            return X
+
+        X_scaled = self.scaler.transform(X)
+        return pd.DataFrame(X_scaled, columns=X.columns, index=X.index)
+
     def train_test_split(
         self,
         X: pd.DataFrame,
@@ -247,7 +282,7 @@ class DataPreprocessor:
         shuffle: bool = False
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
         """
-        学習データとテストデータに分割
+        学習データとテストデータに分割（時系列対応）
 
         Args:
             X: 特徴量

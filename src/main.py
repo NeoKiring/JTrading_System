@@ -78,7 +78,7 @@ def train_model_workflow(symbol: str, logger):
         add_technical_indicators=True,
         add_lag_features=True,
         add_rolling_features=True,
-        scale_features=True
+        scale_features=False  # スケーリングは分割後に実施（データリーケージ防止）
     )
 
     # 学習/テストデータ分割
@@ -86,6 +86,11 @@ def train_model_workflow(symbol: str, logger):
     X_train, X_test, y_train, y_test = preprocessor.train_test_split(
         X, y, test_size=test_size, shuffle=False
     )
+
+    # スケーリング（訓練データでfitし、テストデータにtransform）
+    preprocessor.fit_scaler(X_train, method='standard')
+    X_train = preprocessor.transform_features(X_train)
+    X_test = preprocessor.transform_features(X_test)
 
     # モデル訓練
     model = XGBoostModel()
@@ -125,7 +130,11 @@ def backtest_workflow(symbol: str, logger):
 
     X, y = preprocessor.prepare_training_data(
         df,
-        prediction_days=prediction_days
+        prediction_days=prediction_days,
+        add_technical_indicators=True,
+        add_lag_features=True,
+        add_rolling_features=True,
+        scale_features=False  # スケーリングは分割後に実施（データリーケージ防止）
     )
 
     # モデル訓練（簡易版）
@@ -133,6 +142,11 @@ def backtest_workflow(symbol: str, logger):
     X_train, X_test, y_train, y_test = preprocessor.train_test_split(
         X, y, test_size=test_size, shuffle=False
     )
+
+    # スケーリング（訓練データでfitし、テストデータにtransform）
+    preprocessor.fit_scaler(X_train, method='standard')
+    X_train = preprocessor.transform_features(X_train)
+    X_test = preprocessor.transform_features(X_test)
 
     model = XGBoostModel()
     model.train(X_train, y_train, verbose=False)
