@@ -17,9 +17,9 @@ data_collection:
 
   # News data settings
   news:
-    enabled: false  # Will be enabled in Phase 2
-    max_articles_per_symbol: 10
-    language: "jp"
+    enabled: true
+    max_articles_per_symbol: 100
+    language: "ja"
 
 # Database Settings
 database:
@@ -85,3 +85,46 @@ paths:
   models: "data/models"
   logs: "logs"
   config: "config"
+
+# News API Settings (Phase 2)
+news:
+  api_key: ""  # Set your NewsAPI key in api_keys.yaml or here
+  max_articles: 100
+  language: "ja"
+  default_days: 7
+
+# Sentiment Analysis Settings (Phase 2)
+sentiment:
+  model_name: "cardiffnlp/twitter-xlm-roberta-base-sentiment"  # Multi-language sentiment model
+  use_gpu: true
+  batch_size: 32
+
+# Deep Learning Settings (Phase 2)
+deep_learning:
+  # LSTM Model
+  lstm:
+    sequence_length: 60
+    lstm_units: [128, 64, 32]
+    dense_units: [32, 16]
+    dropout: 0.2
+    learning_rate: 0.001
+    epochs: 100
+    batch_size: 32
+    early_stopping_patience: 10
+
+  # GRU Model
+  gru:
+    sequence_length: 60
+    gru_units: [128, 64, 32]
+    dense_units: [32, 16]
+    dropout: 0.2
+    learning_rate: 0.001
+    epochs: 100
+    batch_size: 32
+    early_stopping_patience: 10
+
+# Report Generation Settings (Phase 2)
+reports:
+  output_dir: "reports"
+  default_format: "excel"  # excel or pdf
+  include_charts: true

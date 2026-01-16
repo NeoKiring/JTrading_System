@@ -36,12 +36,13 @@ echo 実行モードを選択してください:
 echo   1. 拡張GUI モード（チャート表示対応）★推奨
 echo   2. シンプルGUI モード
 echo   3. データ収集のみ
-echo   4. モデル訓練のみ
-echo   5. バックテストのみ
-echo   6. フルワークフロー
+echo   4. ニュース収集・感情分析 ★NEW
+echo   5. モデル訓練のみ
+echo   6. バックテストのみ
+echo   7. フルワークフロー
 echo.
 
-set /p mode="モード番号を入力 (1-6, Enter=1): "
+set /p mode="モード番号を入力 (1-7, Enter=1): "
 
 REM デフォルト値の設定
 if "!mode!"=="" set mode=1
@@ -50,9 +51,10 @@ REM モードに応じて処理を分岐
 if "!mode!"=="1" goto MODE_GUI2
 if "!mode!"=="2" goto MODE_GUI
 if "!mode!"=="3" goto MODE_COLLECT
-if "!mode!"=="4" goto MODE_TRAIN
-if "!mode!"=="5" goto MODE_BACKTEST
-if "!mode!"=="6" goto MODE_FULL
+if "!mode!"=="4" goto MODE_NEWS
+if "!mode!"=="5" goto MODE_TRAIN
+if "!mode!"=="6" goto MODE_BACKTEST
+if "!mode!"=="7" goto MODE_FULL
 
 REM 無効なモード番号
 echo [エラー] 無効なモード番号です
@@ -75,6 +77,12 @@ goto END
 echo.
 echo データ収集を開始中...
 python src\main.py --mode collect
+goto END
+
+:MODE_NEWS
+echo.
+echo ニュース収集・感情分析を開始中...
+python src\main.py --mode news
 goto END
 
 :MODE_TRAIN

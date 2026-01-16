@@ -14,7 +14,9 @@ sys.path.insert(0, str(project_root))
 from src.utils.logger import setup_logger, get_logger
 from src.utils.config import get_config, get_symbols
 from src.data.collectors.stock_collector import StockCollector
+from src.data.collectors.news_collector import NewsCollector
 from src.data.processors.data_preprocessor import DataPreprocessor
+from src.data.processors.sentiment_analyzer import SentimentAnalyzer
 from src.models.ml_models import XGBoostModel, evaluate_model
 from src.backtesting.backtest_engine import BacktestEngine
 from src.gui.main_window import launch_gui
@@ -173,6 +175,38 @@ def backtest_workflow(symbol: str, logger):
     return results
 
 
+def news_workflow(symbols: list, logger):
+    """ニュース収集・感情分析ワークフロー"""
+    logger.info("Starting news collection and sentiment analysis workflow...")
+
+    # ニュース収集
+    news_collector = NewsCollector()
+    logger.info(f"Collecting news for {len(symbols)} symbols")
+
+    news_collector.update_news_batch(symbols, days=get_config('news.default_days', 7))
+
+    # 感情分析
+    sentiment_analyzer = SentimentAnalyzer()
+    logger.info("Analyzing sentiment for all collected news...")
+
+    for symbol in symbols:
+        try:
+            sentiment_analyzer.update_database_sentiment(symbol=symbol)
+            summary = sentiment_analyzer.get_sentiment_summary(symbol=symbol)
+
+            logger.info(f"\n{symbol} Sentiment Summary:")
+            logger.info(f"  Total Articles: {summary.get('total_articles', 0)}")
+            logger.info(f"  Average Sentiment: {summary.get('average_sentiment', 0):.3f}")
+            logger.info(f"  Positive: {summary.get('positive_count', 0)} ({summary.get('positive_ratio', 0)*100:.1f}%)")
+            logger.info(f"  Neutral: {summary.get('neutral_count', 0)}")
+            logger.info(f"  Negative: {summary.get('negative_count', 0)} ({summary.get('negative_ratio', 0)*100:.1f}%)")
+
+        except Exception as e:
+            logger.error(f"Error processing sentiment for {symbol}: {e}")
+
+    logger.info("\nNews workflow completed successfully!")
+
+
 def full_workflow(symbol: str, logger):
     """フルワークフロー（データ収集→訓練→バックテスト）"""
     logger.info("=" * 60)
@@ -211,9 +245,9 @@ def main():
 
     parser.add_argument(
         '--mode',
-        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full'],
+        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full', 'news'],
         default='gui2',
-        help='Execution mode (gui2: Enhanced GUI with charts)'
+        help='Execution mode (gui2: Enhanced GUI with charts, news: News collection and sentiment analysis)'
     )
 
     parser.add_argument(
@@ -255,6 +289,11 @@ def main():
         elif args.mode == 'full':
             # フルワークフロー
             full_workflow(args.symbol, logger)
+
+        elif args.mode == 'news':
+            # ニュース収集・感情分析
+            symbols = get_symbols()
+            news_workflow(symbols, logger)
 
         elif args.mode == 'cli':
             # CLI対話モード（将来実装）

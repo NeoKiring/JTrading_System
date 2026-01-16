@@ -9,6 +9,7 @@ import ttkbootstrap as ttk_boot
 from ttkbootstrap.constants import *
 from .dashboard import Dashboard
 from .chart_viewer import ChartViewer
+from .news_viewer import NewsViewer
 from ..utils.logger import get_logger, setup_logger
 from ..utils.config import get_config
 
@@ -131,19 +132,25 @@ class EnhancedMainWindow:
 
         self.chart_viewer = ChartViewer(chart_tab)
 
-        # タブ3: 予測
+        # タブ3: ニュース・感情分析
+        news_tab = ttk_boot.Frame(self.notebook)
+        self.notebook.add(news_tab, text="📰 ニュース")
+
+        self.news_viewer = NewsViewer(news_tab)
+
+        # タブ4: 予測
         prediction_tab = ttk_boot.Frame(self.notebook)
         self.notebook.add(prediction_tab, text="🔮 予測")
 
         self._create_prediction_tab(prediction_tab)
 
-        # タブ4: バックテスト
+        # タブ5: バックテスト
         backtest_tab = ttk_boot.Frame(self.notebook)
         self.notebook.add(backtest_tab, text="⚡ バックテスト")
 
         self._create_backtest_tab(backtest_tab)
 
-        # タブ5: ログ
+        # タブ6: ログ
         log_tab = ttk_boot.Frame(self.notebook)
         self.notebook.add(log_tab, text="📝 ログ")
 
