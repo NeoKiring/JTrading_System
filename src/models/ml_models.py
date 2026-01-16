@@ -245,7 +245,30 @@ def evaluate_model(model: BaseModel, X_test, y_test) -> Dict[str, float]:
     }
 
     # MAPE（Mean Absolute Percentage Error）
-    mape = np.mean(np.abs((y_test - y_pred) / y_test)) * 100
+    # ゼロ除算を防ぐため、epsilon 以上の値のみで計算
+    epsilon = 1e-10
+    y_test_array = np.array(y_test)
+    y_pred_array = np.array(y_pred)
+
+    # 絶対値がepsilon以上の要素のみを使用
+    mask = np.abs(y_test_array) >= epsilon
+    if np.sum(mask) > 0:
+        mape = np.mean(np.abs((y_test_array[mask] - y_pred_array[mask]) / y_test_array[mask])) * 100
+    else:
+        # すべての値がepsilon未満の場合はNaNを設定
+        mape = np.nan
+
     metrics['mape'] = mape
+
+    # sMAPE（Symmetric Mean Absolute Percentage Error）
+    # より安定した代替指標
+    denominator = (np.abs(y_test_array) + np.abs(y_pred_array)) / 2
+    mask_smape = denominator >= epsilon
+    if np.sum(mask_smape) > 0:
+        smape = np.mean(np.abs(y_test_array[mask_smape] - y_pred_array[mask_smape]) / denominator[mask_smape]) * 100
+    else:
+        smape = np.nan
+
+    metrics['smape'] = smape
 
     return metrics

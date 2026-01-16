@@ -105,7 +105,14 @@ def train_model_workflow(symbol: str, logger):
     logger.info(f"  RMSE: {metrics['rmse']:.2f}")
     logger.info(f"  MAE: {metrics['mae']:.2f}")
     logger.info(f"  R²: {metrics['r2']:.4f}")
-    logger.info(f"  MAPE: {metrics['mape']:.2f}%")
+
+    # MAPEとsMAPEの表示（NaNの場合は"N/A"と表示）
+    import math
+    mape_str = f"{metrics['mape']:.2f}%" if not math.isnan(metrics['mape']) else "N/A (zero values in y_test)"
+    smape_str = f"{metrics['smape']:.2f}%" if not math.isnan(metrics['smape']) else "N/A"
+
+    logger.info(f"  MAPE: {mape_str}")
+    logger.info(f"  sMAPE: {smape_str}")
 
     # モデル保存
     model_path = f"data/models/ml/{symbol}_xgboost.joblib"
@@ -179,17 +186,23 @@ def news_workflow(symbols: list, logger):
     """ニュース収集・感情分析ワークフロー"""
     logger.info("Starting news collection and sentiment analysis workflow...")
 
+    # symbols が dict のリストの場合、symbol 文字列のリストに変換
+    if symbols and isinstance(symbols[0], dict):
+        symbol_list = [s['symbol'] for s in symbols]
+    else:
+        symbol_list = symbols
+
     # ニュース収集
     news_collector = NewsCollector()
-    logger.info(f"Collecting news for {len(symbols)} symbols")
+    logger.info(f"Collecting news for {len(symbol_list)} symbols")
 
-    news_collector.update_news_batch(symbols, days=get_config('news.default_days', 7))
+    news_collector.update_news_batch(symbol_list, days=get_config('news.default_days', 7))
 
     # 感情分析
     sentiment_analyzer = SentimentAnalyzer()
     logger.info("Analyzing sentiment for all collected news...")
 
-    for symbol in symbols:
+    for symbol in symbol_list:
         try:
             sentiment_analyzer.update_database_sentiment(symbol=symbol)
             summary = sentiment_analyzer.get_sentiment_summary(symbol=symbol)

@@ -44,11 +44,15 @@ class NewsArticle(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     symbol = Column(String(20), index=True)
+    source = Column(String(100))  # ニュースソース名
+    author = Column(String(200))  # 著者
     title = Column(Text, nullable=False)
+    description = Column(Text)  # 記事説明
     content = Column(Text)
     url = Column(Text)
     published_at = Column(DateTime)
     sentiment_score = Column(Float)
+    sentiment_label = Column(String(20))  # positive/neutral/negative
     created_at = Column(DateTime, default=datetime.now)
 
     def __repr__(self):
