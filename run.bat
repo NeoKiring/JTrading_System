@@ -36,13 +36,14 @@ echo 実行モードを選択してください:
 echo   1. 拡張GUI モード（チャート表示対応）★推奨
 echo   2. シンプルGUI モード
 echo   3. データ収集のみ
-echo   4. ニュース収集・感情分析 ★NEW
-echo   5. モデル訓練のみ
-echo   6. バックテストのみ
-echo   7. フルワークフロー
+echo   4. ニュース収集・感情分析
+echo   5. AutoML（自動機械学習）★NEW Phase 3
+echo   6. モデル訓練のみ
+echo   7. バックテストのみ
+echo   8. フルワークフロー
 echo.
 
-set /p mode="モード番号を入力 (1-7, Enter=1): "
+set /p mode="モード番号を入力 (1-8, Enter=1): "
 
 REM デフォルト値の設定
 if "!mode!"=="" set mode=1
@@ -52,9 +53,10 @@ if "!mode!"=="1" goto MODE_GUI2
 if "!mode!"=="2" goto MODE_GUI
 if "!mode!"=="3" goto MODE_COLLECT
 if "!mode!"=="4" goto MODE_NEWS
-if "!mode!"=="5" goto MODE_TRAIN
-if "!mode!"=="6" goto MODE_BACKTEST
-if "!mode!"=="7" goto MODE_FULL
+if "!mode!"=="5" goto MODE_AUTOML
+if "!mode!"=="6" goto MODE_TRAIN
+if "!mode!"=="7" goto MODE_BACKTEST
+if "!mode!"=="8" goto MODE_FULL
 
 REM 無効なモード番号
 echo [エラー] 無効なモード番号です
@@ -83,6 +85,15 @@ goto END
 echo.
 echo ニュース収集・感情分析を開始中...
 python src\main.py --mode news
+goto END
+
+:MODE_AUTOML
+echo.
+set /p symbol="銘柄コードを入力 (例: 7203.T, Enter=7203.T): "
+if "!symbol!"=="" set symbol=7203.T
+echo AutoML（自動機械学習）を開始中 (銘柄: !symbol!)...
+echo ハイパーパラメータ最適化とモデル比較を実行します。
+python src\main.py --mode automl --symbol !symbol!
 goto END
 
 :MODE_TRAIN

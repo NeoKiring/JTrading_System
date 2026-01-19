@@ -128,3 +128,18 @@ reports:
   output_dir: "reports"
   default_format: "excel"  # excel or pdf
   include_charts: true
+
+# AutoML Settings (Phase 3)
+automl:
+  enabled: true
+  default_models: ["xgboost", "lightgbm", "randomforest"]  # Models to compare
+  n_trials_per_model: 30  # Number of optimization trials per model
+  optimization_timeout: 3600  # Timeout in seconds (1 hour)
+  cv_folds: 5  # Cross-validation folds
+  metric: "rmse"  # Optimization metric (rmse, mae, r2)
+
+  # Search space presets
+  search_space:
+    fast: 10  # Fast search (10 trials)
+    balanced: 30  # Balanced search (30 trials)
+    thorough: 100  # Thorough search (100 trials)

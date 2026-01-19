@@ -18,6 +18,7 @@ from src.data.collectors.news_collector import NewsCollector
 from src.data.processors.data_preprocessor import DataPreprocessor
 from src.data.processors.sentiment_analyzer import SentimentAnalyzer
 from src.models.ml_models import XGBoostModel, evaluate_model
+from src.models.automl import AutoMLPipeline
 from src.backtesting.backtest_engine import BacktestEngine
 from src.gui.main_window import launch_gui
 from src.gui.main_window_enhanced import launch_enhanced_gui
@@ -220,6 +221,58 @@ def news_workflow(symbols: list, logger):
     logger.info("\nNews workflow completed successfully!")
 
 
+def automl_workflow(symbol: str, logger):
+    """AutoMLワークフロー（ハイパーパラメータ最適化＋モデル比較）"""
+    logger.info("=" * 60)
+    logger.info(f"Starting AutoML workflow for {symbol}")
+    logger.info("=" * 60)
+
+    # データ収集
+    logger.info("\n[1/3] Data Collection")
+    collector = StockCollector()
+    df = collector.collect(symbol)
+
+    if df is None or df.empty:
+        logger.error(f"Failed to collect data for {symbol}")
+        return
+
+    # AutoMLパイプライン実行
+    logger.info("\n[2/3] AutoML Optimization")
+    pipeline = AutoMLPipeline()
+
+    models = get_config('automl.default_models', ['xgboost', 'lightgbm', 'randomforest'])
+    n_trials = get_config('automl.n_trials_per_model', 30)
+
+    result = pipeline.run(
+        df=df,
+        symbol=symbol,
+        models=models,
+        n_trials_per_model=n_trials
+    )
+
+    # 結果表示
+    logger.info("\n[3/3] Results")
+    logger.info(f"Best Model: {result['best_model_name'].upper()}")
+    logger.info("\nModel Comparison:")
+
+    for model_name, metrics in result['all_model_results'].items():
+        logger.info(f"\n{model_name.upper()}:")
+        logger.info(f"  RMSE: {metrics['rmse']:.4f}")
+        logger.info(f"  MAE: {metrics['mae']:.4f}")
+        logger.info(f"  R²: {metrics['r2']:.4f}")
+
+    # 最適モデルの保存
+    logger.info("\nSaving best model...")
+    model_path = f"data/models/ml/{symbol}_automl_best.joblib"
+    pipeline.automl.save_best_model(model_path)
+
+    logger.info("\n" + "=" * 60)
+    logger.info("AutoML workflow completed successfully!")
+    logger.info("=" * 60)
+
+    return result
+
+
 def full_workflow(symbol: str, logger):
     """フルワークフロー（データ収集→訓練→バックテスト）"""
     logger.info("=" * 60)
@@ -258,9 +311,9 @@ def main():
 
     parser.add_argument(
         '--mode',
-        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full', 'news'],
+        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full', 'news', 'automl'],
         default='gui2',
-        help='Execution mode (gui2: Enhanced GUI with charts, news: News collection and sentiment analysis)'
+        help='Execution mode (gui2: Enhanced GUI, news: News collection, automl: AutoML optimization)'
     )
 
     parser.add_argument(
@@ -307,6 +360,10 @@ def main():
             # ニュース収集・感情分析
             symbols = get_symbols()
             news_workflow(symbols, logger)
+
+        elif args.mode == 'automl':
+            # AutoML（自動機械学習）
+            automl_workflow(args.symbol, logger)
 
         elif args.mode == 'cli':
             # CLI対話モード（将来実装）
