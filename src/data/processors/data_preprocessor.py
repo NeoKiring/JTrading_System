@@ -194,10 +194,8 @@ class DataPreprocessor:
             pd.DataFrame: 処理済みデータ
         """
         # 前方埋め（Forward Fill）
+        # 時系列データでは未来情報の混入を避けるため、後方埋めは行わない
         df = df.ffill(limit=5)
-
-        # 後方埋め（Backward Fill）
-        df = df.bfill(limit=5)
 
         # それでも残る欠損値は削除
         initial_count = len(df)
