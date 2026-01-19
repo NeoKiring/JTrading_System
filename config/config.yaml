@@ -1,0 +1,145 @@
+# JTrading System Configuration File
+
+# Application Settings
+app:
+  name: "JTrading System"
+  version: "0.1.0"
+  debug: false
+
+# Data Collection Settings
+data_collection:
+  # Stock data settings
+  stock:
+    start_date: "2014-01-01"
+    interval: "1d"  # 1d, 1h, 5m, etc.
+    auto_update: true
+    update_interval_minutes: 60  # Update every 60 minutes
+
+  # News data settings
+  news:
+    enabled: true
+    max_articles_per_symbol: 100
+    language: "ja"
+
+# Database Settings
+database:
+  type: "sqlite"
+  path: "data/jtrading.db"
+  echo: false  # Set to true for SQL query logging
+
+# Model Settings
+model:
+  default_model: "xgboost"
+  prediction_days: 7  # Predict 7 days ahead
+  train_test_split: 0.8
+  random_state: 42
+
+  # Feature engineering
+  features:
+    use_technical_indicators: true
+    use_sentiment_analysis: false  # Phase 2
+    use_lag_features: true
+    lag_periods: [1, 2, 3, 5, 7, 14]
+
+  # Model parameters will be loaded from model_config.yaml
+
+# Backtesting Settings
+backtesting:
+  initial_cash: 10000000  # 10 million JPY
+  commission: 0.001  # 0.1% commission
+  slippage: 0.0005  # 0.05% slippage
+  position_size: 0.1  # 10% of portfolio per position
+
+# GUI Settings
+gui:
+  theme: "darkly"  # darkly, flatly, cosmo, etc.
+  window_size:
+    width: 1280
+    height: 800
+  font_size: 10
+  chart_style: "yahoo"  # yahoo, charles, mike, etc.
+
+# Logging Settings
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "[{time:YYYY-MM-DD HH:mm:ss}] [{level}] [{name}] {message}"
+  rotation: "10 MB"
+  retention: "30 days"
+
+  # Log files
+  files:
+    app: "logs/app.log"
+    error: "logs/error.log"
+    trading: "logs/trading.log"
+
+# Performance Settings
+performance:
+  n_jobs: -1  # Use all available CPU cores (-1)
+  use_gpu: true  # Enable GPU for deep learning
+  cache_size_mb: 500
+
+# Paths
+paths:
+  data_raw: "data/raw"
+  data_processed: "data/processed"
+  models: "data/models"
+  logs: "logs"
+  config: "config"
+
+# News API Settings (Phase 2)
+news:
+  api_key: ""  # Set your NewsAPI key in api_keys.yaml or here
+  max_articles: 100
+  language: "ja"
+  default_days: 7
+
+# Sentiment Analysis Settings (Phase 2)
+sentiment:
+  model_name: "cardiffnlp/twitter-xlm-roberta-base-sentiment"  # Multi-language sentiment model
+  use_gpu: true
+  batch_size: 32
+
+# Deep Learning Settings (Phase 2)
+deep_learning:
+  # LSTM Model
+  lstm:
+    sequence_length: 60
+    lstm_units: [128, 64, 32]
+    dense_units: [32, 16]
+    dropout: 0.2
+    learning_rate: 0.001
+    epochs: 100
+    batch_size: 32
+    early_stopping_patience: 10
+
+  # GRU Model
+  gru:
+    sequence_length: 60
+    gru_units: [128, 64, 32]
+    dense_units: [32, 16]
+    dropout: 0.2
+    learning_rate: 0.001
+    epochs: 100
+    batch_size: 32
+    early_stopping_patience: 10
+
+# Report Generation Settings (Phase 2)
+reports:
+  output_dir: "reports"
+  default_format: "excel"  # excel or pdf
+  include_charts: true
+
+# AutoML Settings (Phase 3)
+automl:
+  enabled: true
+  default_models: ["xgboost", "lightgbm", "randomforest"]  # Models to compare
+  n_trials_per_model: 30  # Number of optimization trials per model
+  optimization_timeout: 3600  # Timeout in seconds (1 hour)
+  cv_folds: 5  # Cross-validation folds
+  metric: "rmse"  # Optimization metric (rmse, mae, r2)
+
+  # Search space presets
+  search_space:
+    fast: 10  # Fast search (10 trials)
+    balanced: 30  # Balanced search (30 trials)
+    thorough: 100  # Thorough search (100 trials)
