@@ -21,6 +21,9 @@ from src.models.ml_models import XGBoostModel, evaluate_model
 from src.models.automl import AutoMLPipeline
 from src.backtesting.backtest_engine import BacktestEngine
 from src.backtesting.report_generator import ReportGenerator
+from src.prediction.realtime_predictor import RealTimePredictor
+from src.prediction.prediction_scheduler import PredictionScheduler, SmartScheduler
+from src.prediction.alert_manager import AlertManager
 from src.gui.main_window import launch_gui
 from src.gui.main_window_enhanced import launch_enhanced_gui
 
@@ -315,15 +318,180 @@ def full_workflow(symbol: str, logger):
     logger.info("=" * 60)
 
 
+def realtime_prediction_workflow(symbols: list, logger, mode: str = 'once'):
+    """リアルタイム予測ワークフロー
+
+    Args:
+        symbols: 予測する銘柄リスト
+        logger: ロガー
+        mode: 実行モード ('once': 1回のみ, 'schedule': スケジュール実行, 'smart': スマートスケジュール)
+    """
+    logger.info("=" * 60)
+    logger.info("Starting Real-Time Prediction Workflow")
+    logger.info("=" * 60)
+
+    # 銘柄リストの処理
+    if symbols and isinstance(symbols[0], dict):
+        symbol_list = [s['symbol'] for s in symbols]
+    else:
+        symbol_list = symbols
+
+    # アラートマネージャー初期化
+    alert_manager = AlertManager()
+
+    # アラートコールバック（コンソール出力）
+    def on_alert(alert):
+        """アラート通知コールバック"""
+        logger.warning(f"⚠️ ALERT: {alert}")
+
+    alert_manager.register_callback(on_alert)
+
+    if mode == 'once':
+        # 1回のみ実行
+        logger.info(f"\n[Mode: One-time] Predicting {len(symbol_list)} symbols\n")
+
+        predictor = RealTimePredictor()
+
+        for symbol in symbol_list:
+            logger.info(f"\n{'='*40}")
+            logger.info(f"Predicting: {symbol}")
+            logger.info(f"{'='*40}")
+
+            # 予測実行
+            result = predictor.predict(symbol)
+
+            if result['status'] == 'success':
+                logger.info(f"✓ Prediction successful")
+                logger.info(f"  Current Price: ¥{result['current_price']:,.2f}")
+                logger.info(f"  Predicted Price ({result['prediction_days']} days): ¥{result['predicted_price']:,.2f}")
+                logger.info(f"  Expected Change: {result['predicted_change_pct']:+.2f}%")
+                logger.info(f"  Confidence Range: ¥{result['confidence_lower']:,.2f} - ¥{result['confidence_upper']:,.2f}")
+                logger.info(f"  Model: {result['model_type']}")
+
+                # アラートチェック
+                alerts = alert_manager.check_prediction(result)
+                if alerts:
+                    logger.info(f"  Generated {len(alerts)} alert(s)")
+
+            else:
+                logger.error(f"✗ Prediction failed: {result['error']}")
+
+        # アラートサマリー
+        summary = alert_manager.get_summary()
+        logger.info(f"\n{'='*60}")
+        logger.info("Alert Summary")
+        logger.info(f"{'='*60}")
+        logger.info(f"  Total Alerts: {summary['total']}")
+        logger.info(f"  By Level: {summary['by_level']}")
+        logger.info(f"  By Type: {summary['by_type']}")
+
+    elif mode == 'schedule':
+        # 定期実行
+        logger.info(f"\n[Mode: Scheduled] Starting prediction scheduler\n")
+
+        scheduler = PredictionScheduler()
+
+        # 予測完了時のコールバック
+        def on_prediction_complete(symbol, result):
+            if result['status'] == 'success':
+                logger.info(f"✓ {symbol}: {result['predicted_change_pct']:+.2f}%")
+
+                # アラートチェック
+                alert_manager.check_prediction(result)
+
+        # バッチ完了時のコールバック
+        def on_batch_complete(results):
+            success_count = sum(1 for r in results.values() if r['status'] == 'success')
+            logger.info(f"\n✓ Batch prediction completed: {success_count}/{len(results)} succeeded")
+
+            # アラートサマリー
+            summary = alert_manager.get_summary()
+            if summary['recent_count'] > 0:
+                logger.warning(f"⚠️ {summary['recent_count']} new alert(s)")
+
+        scheduler.set_callbacks(
+            on_prediction_complete=on_prediction_complete,
+            on_batch_complete=on_batch_complete
+        )
+
+        # スケジューラー開始
+        interval_minutes = get_config('realtime_prediction.interval_minutes', 60)
+        scheduler.start(symbols=symbol_list, interval_minutes=interval_minutes)
+
+        logger.info(f"Scheduler started (interval: {interval_minutes} minutes)")
+        logger.info("Press Ctrl+C to stop...\n")
+
+        try:
+            # メインスレッドを維持
+            import time
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("\nStopping scheduler...")
+            scheduler.stop()
+            logger.info("Scheduler stopped")
+
+    elif mode == 'smart':
+        # スマートスケジュール実行
+        logger.info(f"\n[Mode: Smart Schedule] Starting smart prediction scheduler\n")
+        logger.info("Scheduled times: 09:15, 11:15, 12:45, 15:15\n")
+
+        scheduler = SmartScheduler()
+
+        # 予測完了時のコールバック
+        def on_prediction_complete(symbol, result):
+            if result['status'] == 'success':
+                logger.info(f"✓ {symbol}: {result['predicted_change_pct']:+.2f}%")
+
+                # アラートチェック
+                alert_manager.check_prediction(result)
+
+        # バッチ完了時のコールバック
+        def on_batch_complete(results):
+            success_count = sum(1 for r in results.values() if r['status'] == 'success')
+            logger.info(f"\n✓ Batch prediction completed: {success_count}/{len(results)} succeeded")
+
+            # アラートサマリー
+            summary = alert_manager.get_summary()
+            if summary['recent_count'] > 0:
+                logger.warning(f"⚠️ {summary['recent_count']} new alert(s)")
+
+        scheduler.set_callbacks(
+            on_prediction_complete=on_prediction_complete,
+            on_batch_complete=on_batch_complete
+        )
+
+        # スケジューラー開始
+        market_hours_only = get_config('realtime_prediction.market_hours_only', True)
+        scheduler.start(symbols=symbol_list, market_hours_only=market_hours_only)
+
+        logger.info("Smart scheduler started")
+        logger.info("Press Ctrl+C to stop...\n")
+
+        try:
+            # メインスレッドを維持
+            import time
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("\nStopping scheduler...")
+            scheduler.stop()
+            logger.info("Scheduler stopped")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("Real-Time Prediction workflow completed!")
+    logger.info("=" * 60)
+
+
 def main():
     """メイン関数"""
     parser = argparse.ArgumentParser(description='JTrading System')
 
     parser.add_argument(
         '--mode',
-        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full', 'news', 'automl'],
+        choices=['gui', 'gui2', 'cli', 'collect', 'train', 'backtest', 'full', 'news', 'automl', 'realtime'],
         default='gui2',
-        help='Execution mode (gui2: Enhanced GUI, news: News collection, automl: AutoML optimization)'
+        help='Execution mode (gui2: Enhanced GUI, news: News collection, automl: AutoML, realtime: Real-time prediction)'
     )
 
     parser.add_argument(
@@ -331,6 +499,13 @@ def main():
         type=str,
         default='7203.T',
         help='Stock symbol (default: 7203.T - Toyota)'
+    )
+
+    parser.add_argument(
+        '--realtime-mode',
+        choices=['once', 'schedule', 'smart'],
+        default='once',
+        help='Real-time prediction mode (once: One-time, schedule: Scheduled, smart: Smart schedule)'
     )
 
     args = parser.parse_args()
@@ -374,6 +549,11 @@ def main():
         elif args.mode == 'automl':
             # AutoML（自動機械学習）
             automl_workflow(args.symbol, logger)
+
+        elif args.mode == 'realtime':
+            # リアルタイム予測
+            symbols = get_symbols('priority') or [args.symbol]
+            realtime_prediction_workflow(symbols, logger, mode=args.realtime_mode)
 
         elif args.mode == 'cli':
             # CLI対話モード（将来実装）

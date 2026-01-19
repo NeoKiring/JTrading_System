@@ -143,3 +143,38 @@ automl:
     fast: 10  # Fast search (10 trials)
     balanced: 30  # Balanced search (30 trials)
     thorough: 100  # Thorough search (100 trials)
+
+# Real-Time Prediction Settings (Phase 4)
+realtime_prediction:
+  enabled: true
+  cache_ttl_minutes: 30  # Prediction cache time-to-live
+  interval_minutes: 60  # Default prediction interval
+  schedule_time: null  # Schedule time (HH:MM format, null for interval-based)
+  market_hours_only: true  # Only run during market hours
+
+  # Smart scheduler settings
+  smart_schedule:
+    enabled: true
+    times:
+      - "09:15"  # After market open
+      - "11:15"  # Before morning close
+      - "12:45"  # After afternoon open
+      - "15:15"  # After market close
+
+# Alert/Notification Settings (Phase 4)
+alerts:
+  enabled: true
+  max_history: 1000  # Maximum alert history size
+
+  # Alert thresholds
+  price_change_up_threshold: 5.0  # % (trigger buy alert)
+  price_change_down_threshold: -5.0  # % (trigger sell alert)
+  high_volatility_threshold: 10.0  # % (confidence interval width)
+  confidence_low_threshold: 0.3  # Ratio (confidence range / predicted price)
+
+  # Notification channels
+  notifications:
+    gui: true  # Show in GUI
+    console: true  # Log to console
+    email: false  # Send email (requires SMTP configuration)
+    sound: true  # Play sound alert
