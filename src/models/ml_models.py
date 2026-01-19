@@ -193,7 +193,7 @@ class RandomForestModel(BaseModel):
 
         self.model = RandomForestRegressor(**params)
 
-    def train(self, X_train, y_train, X_val=None, y_val=None):
+    def train(self, X_train, y_train, X_val=None, y_val=None, **kwargs):
         """モデルを訓練"""
         self.logger.info("Training Random Forest model...")
 

@@ -20,6 +20,7 @@ from src.data.processors.sentiment_analyzer import SentimentAnalyzer
 from src.models.ml_models import XGBoostModel, evaluate_model
 from src.models.automl import AutoMLPipeline
 from src.backtesting.backtest_engine import BacktestEngine
+from src.backtesting.report_generator import ReportGenerator
 from src.gui.main_window import launch_gui
 from src.gui.main_window_enhanced import launch_enhanced_gui
 
@@ -179,6 +180,15 @@ def backtest_workflow(symbol: str, logger):
     logger.info(f"  Max Drawdown: {results['max_drawdown_pct']:.2f}%")
     logger.info(f"  Win Rate: {results['win_rate_pct']:.2f}%")
     logger.info(f"  Number of Trades: {results['num_trades']}")
+
+    report_format = get_config('reports.default_format', 'excel')
+    report_generator = ReportGenerator()
+    if report_format == 'pdf':
+        report_path = report_generator.generate_backtest_report_pdf(results, symbol)
+    else:
+        report_path = report_generator.generate_backtest_report_excel(results, symbol)
+    if report_path:
+        logger.info(f"Backtest report generated: {report_path}")
 
     return results
 

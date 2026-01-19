@@ -7,7 +7,6 @@ import optuna
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Optional, List, Tuple
-from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import joblib
 from pathlib import Path
@@ -44,6 +43,30 @@ class AutoML:
         self.study = None
         self.optimization_history = []
 
+    def _get_metric_settings(self) -> Tuple[str, str]:
+        """
+        最適化メトリクスと方向を取得
+
+        Returns:
+            Tuple[str, str]: (metric_name, direction)
+        """
+        metric = self.config.get('metric', 'rmse').lower()
+        if metric in {'rmse', 'mae'}:
+            return metric, 'minimize'
+        if metric == 'r2':
+            return metric, 'maximize'
+        logger.warning(f"Unknown metric '{metric}', defaulting to rmse")
+        return 'rmse', 'minimize'
+
+    @staticmethod
+    def _calculate_metric(metric: str, y_true: pd.Series, y_pred: np.ndarray) -> float:
+        """指定されたメトリクスを計算"""
+        if metric == 'mae':
+            return mean_absolute_error(y_true, y_pred)
+        if metric == 'r2':
+            return r2_score(y_true, y_pred)
+        return np.sqrt(mean_squared_error(y_true, y_pred))
+
     def optimize_xgboost(
         self,
         X_train: pd.DataFrame,
@@ -65,7 +88,8 @@ class AutoML:
         Returns:
             Dict: 最適なパラメータ
         """
-        logger.info("Optimizing XGBoost hyperparameters...")
+        metric_name, direction = self._get_metric_settings()
+        logger.info(f"Optimizing XGBoost hyperparameters with metric={metric_name}...")
 
         def objective(trial):
             params = {
@@ -80,21 +104,24 @@ class AutoML:
                 'reg_lambda': trial.suggest_float('reg_lambda', 0, 10)
             }
 
-            model = XGBoostModel(params)
+            model = XGBoostModel(**params)
             model.train(X_train, y_train, verbose=False)
 
             y_pred = model.predict(X_val)
-            rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-
-            return rmse
+            return self._calculate_metric(metric_name, y_val, y_pred)
 
         study = optuna.create_study(
-            direction='minimize',
+            direction=direction,
             study_name='xgboost_optimization'
         )
-        study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+        study.optimize(
+            objective,
+            n_trials=n_trials,
+            timeout=self.config.get('optimization_timeout'),
+            show_progress_bar=True
+        )
 
-        logger.info(f"Best RMSE: {study.best_value:.4f}")
+        logger.info(f"Best {metric_name.upper()}: {study.best_value:.4f}")
         logger.info(f"Best params: {study.best_params}")
 
         return study.best_params
@@ -120,7 +147,8 @@ class AutoML:
         Returns:
             Dict: 最適なパラメータ
         """
-        logger.info("Optimizing LightGBM hyperparameters...")
+        metric_name, direction = self._get_metric_settings()
+        logger.info(f"Optimizing LightGBM hyperparameters with metric={metric_name}...")
 
         def objective(trial):
             params = {
@@ -135,21 +163,24 @@ class AutoML:
                 'reg_lambda': trial.suggest_float('reg_lambda', 0, 10)
             }
 
-            model = LightGBMModel(params)
+            model = LightGBMModel(**params)
             model.train(X_train, y_train, verbose=False)
 
             y_pred = model.predict(X_val)
-            rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-
-            return rmse
+            return self._calculate_metric(metric_name, y_val, y_pred)
 
         study = optuna.create_study(
-            direction='minimize',
+            direction=direction,
             study_name='lightgbm_optimization'
         )
-        study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+        study.optimize(
+            objective,
+            n_trials=n_trials,
+            timeout=self.config.get('optimization_timeout'),
+            show_progress_bar=True
+        )
 
-        logger.info(f"Best RMSE: {study.best_value:.4f}")
+        logger.info(f"Best {metric_name.upper()}: {study.best_value:.4f}")
         logger.info(f"Best params: {study.best_params}")
 
         return study.best_params
@@ -175,7 +206,8 @@ class AutoML:
         Returns:
             Dict: 最適なパラメータ
         """
-        logger.info("Optimizing RandomForest hyperparameters...")
+        metric_name, direction = self._get_metric_settings()
+        logger.info(f"Optimizing RandomForest hyperparameters with metric={metric_name}...")
 
         def objective(trial):
             params = {
@@ -187,21 +219,24 @@ class AutoML:
                 'bootstrap': trial.suggest_categorical('bootstrap', [True, False])
             }
 
-            model = RandomForestModel(params)
+            model = RandomForestModel(**params)
             model.train(X_train, y_train, verbose=False)
 
             y_pred = model.predict(X_val)
-            rmse = np.sqrt(mean_squared_error(y_val, y_pred))
-
-            return rmse
+            return self._calculate_metric(metric_name, y_val, y_pred)
 
         study = optuna.create_study(
-            direction='minimize',
+            direction=direction,
             study_name='randomforest_optimization'
         )
-        study.optimize(objective, n_trials=n_trials, show_progress_bar=True)
+        study.optimize(
+            objective,
+            n_trials=n_trials,
+            timeout=self.config.get('optimization_timeout'),
+            show_progress_bar=True
+        )
 
-        logger.info(f"Best RMSE: {study.best_value:.4f}")
+        logger.info(f"Best {metric_name.upper()}: {study.best_value:.4f}")
         logger.info(f"Best params: {study.best_params}")
 
         return study.best_params
@@ -247,21 +282,21 @@ class AutoML:
                         X_train, y_train, X_val, y_val,
                         n_trials=n_trials_per_model
                     )
-                    model = XGBoostModel(best_params)
+                    model = XGBoostModel(**best_params)
 
                 elif model_name == 'lightgbm':
                     best_params = self.optimize_lightgbm(
                         X_train, y_train, X_val, y_val,
                         n_trials=n_trials_per_model
                     )
-                    model = LightGBMModel(best_params)
+                    model = LightGBMModel(**best_params)
 
                 elif model_name == 'randomforest':
                     best_params = self.optimize_randomforest(
                         X_train, y_train, X_val, y_val,
                         n_trials=n_trials_per_model
                     )
-                    model = RandomForestModel(best_params)
+                    model = RandomForestModel(**best_params)
 
                 else:
                     logger.warning(f"Unknown model: {model_name}, skipping")

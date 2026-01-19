@@ -31,6 +31,7 @@ class TechnicalIndicators:
             # トレンド系指標
             df = TechnicalIndicators.add_sma(df, periods=[5, 10, 20, 50, 200])
             df = TechnicalIndicators.add_ema(df, periods=[5, 10, 20, 50, 200])
+            df = TechnicalIndicators.add_wma(df, period=20)
             df = TechnicalIndicators.add_macd(df)
             df = TechnicalIndicators.add_bollinger_bands(df)
 
@@ -52,6 +53,11 @@ class TechnicalIndicators:
             # 価格変化
             df = TechnicalIndicators.add_returns(df)
             df = TechnicalIndicators.add_log_returns(df)
+
+            # パターン・その他指標
+            df = TechnicalIndicators.add_candlestick_patterns(df)
+            df = TechnicalIndicators.add_pivot_points(df)
+            df = TechnicalIndicators.add_price_channels(df)
 
             logger.info(f"Added {len(df.columns) - 6} technical indicators")  # 6はOHLCV+date
 
