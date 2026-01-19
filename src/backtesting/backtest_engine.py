@@ -44,7 +44,8 @@ class BacktestEngine:
         self,
         data: pd.DataFrame,
         predictions: pd.Series,
-        threshold: float = 0.02
+        threshold: float = 0.02,
+        use_next_day_execution: bool = True
     ) -> Dict:
         """
         バックテストを実行
@@ -53,20 +54,38 @@ class BacktestEngine:
             data: 株価データ（OHLCVを含む）
             predictions: 予測値（価格または変化率）
             threshold: 取引閾値（予測上昇率がこの値を超えたら買い）
+            use_next_day_execution: 翌日執行を使用するか（デフォルトTrue）
+                True: t日の予測でt+1日の終値で売買（先読み軽減）
+                False: t日の予測でt日の終値で売買（従来の動作、非推奨）
 
         Returns:
             Dict: バックテスト結果
 
         Note:
-            現在の実装では、以下の制限があります：
+            use_next_day_execution=True の場合、シグナル判定は当日の終値、
+            約定は翌日の始値（または終値）で行われます。
+            これにより先読みバイアスを大幅に軽減できます。
+
+            現在の実装の制限事項：
             1. 予測期間（prediction_days）を考慮した保有期間管理がない
             2. シグナルベースの売買のみ（予測期間後の自動決済なし）
 
             より正確なバックテストには、以下の改善が必要です：
             - 予測期間に基づく保有期間管理
             - ウォークフォワード分析の実装
+            - スリッページのより正確なモデリング
+
+            use_next_day_execution=False は後方互換性のために残されていますが、
+            バックテスト結果が過大評価されるため非推奨です。
         """
         logger.info("Running backtest...")
+
+        if not use_next_day_execution:
+            logger.warning(
+                "⚠️  use_next_day_execution=False: Backtest uses same-day execution. "
+                "This causes look-ahead bias and overestimates performance. "
+                "Consider using use_next_day_execution=True for more realistic results."
+            )
 
         # データのリセット
         self.cash = self.initial_cash
@@ -76,7 +95,15 @@ class BacktestEngine:
 
         # データの前処理
         data = data.copy()
-        data['prediction'] = predictions
+
+        # 翌日執行モード：予測を1日先にシフト
+        # t日の予測 → t+1日の売買判定に使用（先読み軽減）
+        if use_next_day_execution:
+            data['prediction'] = predictions.shift(1)
+            logger.info("Using next-day execution: predictions shifted by 1 day to reduce look-ahead bias")
+        else:
+            data['prediction'] = predictions
+
         data['prediction_return'] = (data['prediction'] - data['close']) / data['close']
 
         # バックテストループ（シグナルは当日、約定は翌日）

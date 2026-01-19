@@ -185,25 +185,45 @@ class DataPreprocessor:
 
     def _handle_missing_values(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        欠損値を処理
+        欠損値を処理（時系列データ対応）
 
         Args:
             df: データフレーム
 
         Returns:
             pd.DataFrame: 処理済みデータ
+
+        Note:
+            時系列データのため、未来情報の混入を防ぐためffillのみ使用。
+            bfillは使用しない（未来データによる過去の補完を防止）。
         """
-        # 前方埋め（Forward Fill）
-        # 時系列データでは未来情報の混入を避けるため、後方埋めは行わない
-        df = df.ffill(limit=5)
+        initial_count = len(df)
+        initial_missing = df.isnull().sum().sum()
+
+        # 欠損率の確認
+        if initial_missing > 0:
+            missing_ratio = initial_missing / (len(df) * len(df.columns))
+            logger.info(f"Initial missing values: {initial_missing} ({missing_ratio*100:.2f}%)")
+
+        # 前方埋め（Forward Fill）のみ使用
+        # 時系列データでは過去の値で未来を埋めるのは許容されるが、逆は不可
+        df = df.ffill(limit=10)
+
+        # カラムごとの欠損状況をログ出力
+        remaining_missing = df.isnull().sum()
+        if remaining_missing.sum() > 0:
+            cols_with_missing = remaining_missing[remaining_missing > 0]
+            for col, count in cols_with_missing.items():
+                logger.warning(f"Column '{col}' still has {count} missing values after ffill")
 
         # それでも残る欠損値は削除
-        initial_count = len(df)
+        # （連続欠損が多い場合や、データ開始直後の欠損）
         df = df.dropna()
         removed_count = initial_count - len(df)
 
         if removed_count > 0:
-            logger.warning(f"Removed {removed_count} rows with missing values")
+            logger.warning(f"Removed {removed_count} rows with missing values after ffill (limit=10)")
+            logger.info(f"Final dataset size: {len(df)} rows")
 
         return df
 
