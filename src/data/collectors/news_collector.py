@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import pandas as pd
 from .base_collector import BaseCollector
 from ...utils.logger import get_logger
-from ...utils.config import get_config, get_symbols
+from ...utils.config import get_config, get_symbols, get_all_symbols
 from ...data.storage.database import DatabaseManager, NewsArticle
 
 logger = get_logger(__name__)
@@ -69,21 +69,14 @@ class NewsCollector(BaseCollector):
         # 銘柄名の取得（symbols.yaml から）
         company_name = None
         try:
-            # すべてのsymbolリストを取得して検索
-            all_symbols = []
-            # nikkei_225, test_symbols などすべてのリストを取得
-            for list_name in ['nikkei_225', 'test_symbols', 'custom_symbols']:
-                try:
-                    symbols_list = get_symbols(list_name)
-                    if symbols_list:
-                        all_symbols.extend(symbols_list)
-                except:
-                    pass
-
-            # symbol に一致する企業を検索
-            for stock in all_symbols:
-                if isinstance(stock, dict) and stock.get('symbol') == symbol:
-                    company_name = stock.get('name')
+            symbols_config = get_all_symbols()
+            for symbols_list in symbols_config.values():
+                if isinstance(symbols_list, list):
+                    for stock in symbols_list:
+                        if isinstance(stock, dict) and stock.get('symbol') == symbol:
+                            company_name = stock.get('name')
+                            break
+                if company_name:
                     break
 
         except Exception as e:

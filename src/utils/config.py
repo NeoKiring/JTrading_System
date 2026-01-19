@@ -212,6 +212,16 @@ def get_symbols(list_name: Optional[str] = None) -> list:
     return _config_manager.get_symbols(list_name)
 
 
+def get_all_symbols() -> Dict[str, Any]:
+    """
+    すべての銘柄リストを取得（グローバル関数）
+
+    Returns:
+        dict: 銘柄リスト設定
+    """
+    return _config_manager.symbols
+
+
 def get_model_config(model_name: str) -> Dict[str, Any]:
     """
     モデル設定を取得（グローバル関数）

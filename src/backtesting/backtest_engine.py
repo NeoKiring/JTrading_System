@@ -59,12 +59,10 @@ class BacktestEngine:
 
         Note:
             現在の実装では、以下の制限があります：
-            1. 同日の終値で売買を実行（実際は翌日の始値/終値で実行すべき）
-            2. 予測期間（prediction_days）を考慮した保有期間管理がない
-            3. シグナルベースの売買のみ（予測期間後の自動決済なし）
+            1. 予測期間（prediction_days）を考慮した保有期間管理がない
+            2. シグナルベースの売買のみ（予測期間後の自動決済なし）
 
             より正確なバックテストには、以下の改善が必要です：
-            - 翌日価格での約定
             - 予測期間に基づく保有期間管理
             - ウォークフォワード分析の実装
         """
@@ -81,25 +79,26 @@ class BacktestEngine:
         data['prediction'] = predictions
         data['prediction_return'] = (data['prediction'] - data['close']) / data['close']
 
-        # バックテストループ
-        for idx, row in data.iterrows():
-            self.current_date = row.get('date', idx)
+        # バックテストループ（シグナルは当日、約定は翌日）
+        for idx in range(len(data) - 1):
+            row = data.iloc[idx]
+            next_row = data.iloc[idx + 1]
+
             current_price = row['close']
             pred_return = row['prediction_return']
-
             symbol = row.get('symbol', 'UNKNOWN')
 
-            # シグナル判定
+            execution_price = next_row.get('open', next_row['close'])
+            self.current_date = next_row.get('date', idx + 1)
+
+            # シグナル判定（当日）
             if pred_return > threshold:
-                # 買いシグナル
-                self._execute_buy(symbol, current_price)
-
+                self._execute_buy(symbol, execution_price)
             elif pred_return < -threshold:
-                # 売りシグナル
-                self._execute_sell(symbol, current_price)
+                self._execute_sell(symbol, execution_price)
 
-            # ポートフォリオ価値の記録
-            portfolio_val = self._calculate_portfolio_value(current_price)
+            # ポートフォリオ価値の記録（翌日終値ベース）
+            portfolio_val = self._calculate_portfolio_value(next_row['close'])
             self.portfolio_value.append({
                 'date': self.current_date,
                 'value': portfolio_val,
